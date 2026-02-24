@@ -1,0 +1,12 @@
+{
+  "name": "webapp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "nodemon server.js & browser-sync start --proxy 'http://localhost:3000' --files 'public/**/*.*' --host 0.0.0.0"
+  },
+  "dependencies": {
+    "express": "^5.0.0"
+  }
+}

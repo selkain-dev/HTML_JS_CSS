@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Mini GTA Side-Scroller</title>
+<style>
+  body { margin:0; background:#222; display:flex; justify-content:center; align-items:center; height:100vh; }
+  canvas { border:3px solid #111; background:#88aa88; }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="600" height="300"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+// Gracz
+let player = { x:100, y:200, width:50, height:30, color:"red", vy:0, onGround:true };
+
+// NPC auta / przeszkody
+let cars = [
+  { x:700, y:200, width:50, height:30, color:"blue", speed:3 },
+  { x:900, y:200, width:50, height:30, color:"green", speed:3 }
+];
+
+let keys = {};
+let score = 0;
+
+document.addEventListener("keydown", e => keys[e.key]=true);
+document.addEventListener("keyup", e => keys[e.key]=false);
+
+function checkCollision(a,b){
+  return a.x < b.x + b.width &&
+         a.x + a.width > b.x &&
+         a.y < b.y + b.height &&
+         a.y + a.height > b.y;
+}
+
+function gameLoop(){
+  // Sterowanie graczem
+  if(keys["ArrowLeft"] && player.x>0) player.x -=5;
+  if(keys["ArrowRight"] && player.x<canvas.width-player.width) player.x +=5;
+
+  // Skakanie
+  if(keys["ArrowUp"] && player.onGround){ player.vy=-10; player.onGround=false; }
+  player.vy += 0.5; // grawitacja
+  player.y += player.vy;
+  if(player.y>=200){ player.y=200; player.vy=0; player.onGround=true; }
+
+  // Ruch NPC / przesuwanie w lewo
+  cars.forEach(car=>{
+    car.x -= car.speed;
+    if(car.x + car.width <0) car.x = canvas.width + Math.random()*300; // reset poza ekran
+  });
+
+  // Kradzież / zbieranie punktów
+  cars.forEach(car=>{
+    if(checkCollision(player, car)){
+      score++;
+      player.color = car.color;
+      car.x = canvas.width + Math.random()*300; // reset auta
+    }
+  });
+
+  // Rysowanie
+  ctx.fillStyle = "#88aa88"; ctx.fillRect(0,0,canvas.width,canvas.height); // tło
+  ctx.fillStyle = "gray"; ctx.fillRect(0,230,canvas.width,70); // droga
+
+  // Gracz
+  ctx.fillStyle = player.color;
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+
+  // NPC auta
+  cars.forEach(car=>{
+    ctx.fillStyle = car.color;
+    ctx.fillRect(car.x, car.y, car.width, car.height);
+  });
+
+  // Punkty
+  ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
+  ctx.fillText("Punkty: " + score, 10, 30);
+
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+
+</body>
+</html>

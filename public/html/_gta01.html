@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Mini GTA Auto</title>
+<style>
+  body {
+    margin: 0;
+    background: #222;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+  }
+  canvas {
+    background: #555;
+    border: 3px solid #111;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+// Gracz
+let player = { x: 180, y: 500, width: 40, height: 80, color: "red" };
+
+// NPC - inne auta
+let cars = [
+  { x: 50, y: 100, width: 40, height: 80, color: "blue", speed: 2 },
+  { x: 300, y: 200, width: 40, height: 80, color: "green", speed: 3 },
+  { x: 150, y: -100, width: 40, height: 80, color: "yellow", speed: 2 }
+];
+
+let keys = {};
+let score = 0;
+
+// Sterowanie
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+// Sprawdzenie kolizji
+function checkCollision(a, b){
+  return a.x < b.x + b.width &&
+         a.x + a.width > b.x &&
+         a.y < b.y + b.height &&
+         a.y + a.height > b.y;
+}
+
+// Główna pętla gry
+function gameLoop() {
+  // Ruch gracza
+  if(keys["ArrowLeft"] && player.x>0) player.x -=5;
+  if(keys["ArrowRight"] && player.x<canvas.width-player.width) player.x +=5;
+  if(keys["ArrowUp"] && player.y>0) player.y -=5;
+  if(keys["ArrowDown"] && player.y<canvas.height-player.height) player.y +=5;
+
+  // Ruch NPC
+  cars.forEach(car=>{
+    car.y += car.speed;
+    if(car.y > canvas.height) car.y = -100; // reset auta
+  });
+
+  // Kradzież samochodu
+  if(keys[" "]){
+    cars.forEach(car=>{
+      if(checkCollision(player, car)){
+        score++;
+        player.color = car.color; // przejmujemy kolor auta
+      }
+    });
+  }
+
+  // Rysowanie
+  drawGame();
+
+  requestAnimationFrame(gameLoop);
+}
+
+// Funkcja rysowania
+function drawGame(){
+  // Tło
+  ctx.fillStyle = "#555";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // Gracz
+  ctx.fillStyle = player.color;
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+
+  // NPC
+  cars.forEach(car=>{
+    ctx.fillStyle = car.color;
+    ctx.fillRect(car.x, car.y, car.width, car.height);
+  });
+
+  // Punkty
+  ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
+  ctx.fillText("Punkty: " + score, 10, 30);
+}
+
+gameLoop();
+</script>
+
+</body>
+</html>

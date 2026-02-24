@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Mini VSCode</title>
+
+<style>
+body { font-family:sans-serif; margin:20px; }
+.topbar { margin-bottom:10px; }
+.layout { display:flex; gap:15px; }
+.sidebar { width:250px; border:1px solid #ccc; padding:10px; }
+.editor-area { flex:1; }
+.editor-container { display:flex; gap:10px; height:350px; }
+.panel { flex:1; display:flex; flex-direction:column; }
+.filename { background:#222; color:#fff; padding:5px; font-size:13px; }
+.editor { flex:1; border:1px solid #ccc; }
+iframe { width:100%; height:250px; margin-top:15px; border:1px solid #ccc; }
+select { width:100%; margin-bottom:10px; }
+button { width:100%; margin:5px 0; cursor:pointer; }
+button:hover { background:#eee; }
+</style>
+
+<script src="https://unpkg.com/monaco-editor@0.45.0/min/vs/loader.js"></script>
+</head>
+<body>
+
+<h2>Mini VSCode</h2>
+
+<div class="layout">
+
+<div class="sidebar">
+
+<h3>Folder</h3>
+<select id="folderSelect">
+<option value="">(public)</option>
+</select>
+
+<!-- NOWY PROJEKT -->
+<button id="newFolderBtn">Nowy projekt</button>
+
+<h3>Pliki</h3>
+<select id="fileSelect" size="10"></select>
+<!-- hm -->
+<!-- NOWY PLIK -->
+<button id="newFileBtn">Nowy plik</button>
+
+<!-- STARY PRZYCISK (nie usuwamy) -->
+<button id="loadBtn">Załaduj do panelu (stary)</button>
+
+<!-- NOWE PRZYCISKI -->
+<button id="loadFileBtn">Załaduj plik</button>
+<button id="loadProjectBtn">Załaduj cały projekt</button>
+
+<button id="deleteBtn">Usuń plik</button>
+<button id="archiveBtn">Archiwizuj plik</button>
+
+</div>
+
+<div class="editor-area">
+
+<div class="editor-container">
+
+<div class="panel">
+<div class="filename" id="htmlName">HTML</div>
+<div id="editorHtml" class="editor"></div>
+</div>
+
+<div class="panel">
+<div class="filename" id="cssName">CSS</div>
+<div id="editorCss" class="editor"></div>
+</div>
+
+<div class="panel">
+<div class="filename" id="jsName">JS</div>
+<div id="editorJs" class="editor"></div>
+</div>
+
+</div>
+
+<button id="saveBtn">Zapisz aktywny plik</button>
+<button onclick="preview()">Podgląd</button>
+
+<iframe id="previewFrame"></iframe>
+
+</div>
+
+</div>
+
+<!-- WAŻNE: defer żeby JS się nie wywalał -->
+<script src="js/editor.js" defer></script>
+
+</body>
+</html>

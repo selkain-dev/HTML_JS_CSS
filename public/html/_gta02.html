@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Mini GTA - Mapa</title>
+<style>
+  body {
+    margin: 0;
+    background: #222;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+  }
+  canvas {
+    background: #88aa88; /* trawa */
+    border: 3px solid #111;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="600" height="400"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+// Gracz
+let player = { x: 300, y: 350, width: 40, height: 80, color: "red", angle: 0 };
+
+// NPC auta
+let cars = [
+  { x: 100, y: -50, width: 40, height: 80, color: "blue", speed: 2 },
+  { x: 300, y: -150, width: 40, height: 80, color: "green", speed: 3 },
+  { x: 500, y: -100, width: 40, height: 80, color: "yellow", speed: 2.5 }
+];
+
+let keys = {};
+let score = 0;
+
+// Sterowanie
+document.addEventListener("keydown", e => keys[e.key] = true);
+document.addEventListener("keyup", e => keys[e.key] = false);
+
+// Rysowanie mapy (drogi)
+function drawMap(){
+  // Tło
+  ctx.fillStyle = "#88aa88"; // trawa
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // Droga pionowa
+  ctx.fillStyle = "#333";
+  ctx.fillRect(200,0,200,canvas.height);
+
+  // pasy drogi
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 4;
+  for(let i=0;i<canvas.height;i+=40){
+    ctx.beginPath();
+    ctx.moveTo(300, i);
+    ctx.lineTo(300, i+20);
+    ctx.stroke();
+  }
+}
+
+// Funkcja do rysowania auta z obrotem
+function drawCar(car){
+  ctx.save();
+  ctx.translate(car.x + car.width/2, car.y + car.height/2);
+  ctx.rotate(car.angle * Math.PI/180);
+  ctx.fillStyle = car.color;
+  ctx.fillRect(-car.width/2, -car.height/2, car.width, car.height);
+  ctx.restore();
+}
+
+// Sprawdzenie kolizji
+function checkCollision(a,b){
+  return a.x < b.x + b.width &&
+         a.x + a.width > b.x &&
+         a.y < b.y + b.height &&
+         a.y + a.height > b.y;
+}
+
+// Główna pętla
+function gameLoop(){
+  // Ruch gracza
+  if(keys["ArrowLeft"] && player.x>200) { player.x -=5; player.angle=-15; }
+  else if(keys["ArrowRight"] && player.x<360) { player.x +=5; player.angle=15; }
+  else player.angle=0;
+
+  if(keys["ArrowUp"] && player.y>0) player.y -=5;
+  if(keys["ArrowDown"] && player.y<canvas.height-80) player.y +=5;
+
+  // Ruch NPC
+  cars.forEach(car=>{
+    car.y += car.speed;
+    if(car.y > canvas.height) car.y = -100; // reset
+  });
+
+  // Kradzież
+  if(keys[" "]){
+    cars.forEach(car=>{
+      if(checkCollision(player, car)){
+        score++;
+        player.color = car.color;
+      }
+    });
+  }
+
+  // Rysowanie
+  drawMap();
+  drawCar(player);
+  cars.forEach(drawCar);
+
+  // Punkty
+  ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
+  ctx.fillText("Punkty: " + score, 10, 30);
+
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+
+</body>
+</html>

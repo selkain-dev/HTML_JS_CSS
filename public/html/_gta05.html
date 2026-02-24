@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Mini GTA 2D Side-Scroller</title>
+<style>
+  html, body { margin:0; padding:0; overflow:hidden; width:100%; height:100%; background:#222; }
+  canvas { display:block; background:#88aa88; }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// Gracz
+let player = { x:300, y:canvas.height*0.6, width:50, height:30, color:"red", speed:7 };
+
+// NPC auta
+let cars = [
+  { x:800, y:canvas.height*0.6, width:50, height:30, color:"blue", speed:3 },
+  { x:1200, y:canvas.height*0.4, width:50, height:30, color:"green", speed:4 },
+  { x:1600, y:canvas.height*0.6, width:50, height:30, color:"yellow", speed:2.5 }
+];
+
+// Pociski
+let bullets = [];
+
+let keys = {};
+let cash = 0;
+
+document.addEventListener("keydown", e=>keys[e.key]=true);
+document.addEventListener("keyup", e=>keys[e.key]=false);
+
+// Kolizje
+function checkCollision(a,b){
+  return a.x < b.x + b.width &&
+         a.x + a.width > b.x &&
+         a.y < b.y + b.height &&
+         a.y + a.height > b.y;
+}
+
+// Strzelanie
+function shoot(){
+  bullets.push({ x:player.x+player.width, y:player.y+player.height/2-5, width:10, height:5, speed:10 });
+}
+
+// Główna pętla
+function gameLoop(){
+  // Ruch gracza
+  if(keys["ArrowLeft"] && player.x>0) player.x -= player.speed;
+  if(keys["ArrowRight"] && player.x<canvas.width-player.width) player.x += player.speed;
+  if(keys["ArrowUp"] && player.y>0) player.y -= player.speed;
+  if(keys["ArrowDown"] && player.y<canvas.height-player.height) player.y += player.speed;
+
+  if(keys[" "] && bullets.length<5){ shoot(); } // max 5 pocisków na raz
+
+  // Ruch NPC
+  cars.forEach(car=>{
+    car.x -= car.speed; // scroll w lewo
+    if(car.x + car.width < 0) car.x = canvas.width + Math.random()*800;
+  });
+
+  // Ruch pocisków i kolizje
+  bullets.forEach((bullet,i)=>{
+    bullet.x += bullet.speed;
+    cars.forEach((car,j)=>{
+      if(checkCollision(bullet, car)){
+        cash += 100; // gotówka za zniszczenie
+        cars[j].x = canvas.width + Math.random()*800; // reset auta
+        bullets.splice(i,1); // usuwamy pocisk
+      }
+    });
+    if(bullet.x>canvas.width) bullets.splice(i,1);
+  });
+
+  // Rysowanie
+  ctx.fillStyle="#88aa88"; ctx.fillRect(0,0,canvas.width,canvas.height); // trawa
+  ctx.fillStyle="gray"; ctx.fillRect(0,canvas.height*0.6,canvas.width,100); // droga
+
+  // Gracz
+  ctx.fillStyle = player.color;
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+
+  // NPC auta
+  cars.forEach(car=>{
+    ctx.fillStyle = car.color;
+    ctx.fillRect(car.x, car.y, car.width, car.height);
+  });
+
+  // Pociski
+  bullets.forEach(bullet=>{
+    ctx.fillStyle = "orange";
+    ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+  });
+
+  // Gotówka
+  ctx.fillStyle="white";
+  ctx.font="24px Arial";
+  ctx.fillText("Gotówka: $" + cash, 20,40);
+
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+
+// dynamiczne dopasowanie do okna
+window.addEventListener("resize", ()=>{
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+</script>
+</body>
+</html>

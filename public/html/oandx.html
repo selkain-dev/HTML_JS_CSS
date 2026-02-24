@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Kółko i Krzyżyk vs AI</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background: #f4f4f4;
+  }
+
+  h1 {
+    margin-top: 20px;
+  }
+
+  #board {
+    display: grid;
+    grid-template-columns: repeat(3, 100px);
+    grid-template-rows: repeat(3, 100px);
+    gap: 5px;
+    justify-content: center;
+    margin: 20px auto;
+  }
+
+  .cell {
+    background: white;
+    border: 2px solid #333;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .cell:hover {
+    background: #e0e0e0;
+  }
+
+  #status {
+    font-size: 20px;
+    margin: 15px;
+  }
+
+  button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Kółko i Krzyżyk vs AI</h1>
+<div id="status">Twoja tura (X)</div>
+<div id="board"></div>
+<button onclick="resetGame()">Restart</button>
+
+<script>
+  const board = document.getElementById("board");
+  const statusText = document.getElementById("status");
+  let currentPlayer = "X";
+  let cells = [];
+  let gameActive = true;
+
+  function createBoard() {
+    board.innerHTML = "";
+    cells = [];
+    for (let i = 0; i < 9; i++) {
+      const cell = document.createElement("div");
+      cell.classList.add("cell");
+      cell.addEventListener("click", () => handlePlayerMove(i));
+      board.appendChild(cell);
+      cells.push(cell);
+    }
+  }
+
+  function handlePlayerMove(index) {
+    if (!gameActive || cells[index].textContent !== "") return;
+
+    makeMove(index, "X");
+
+    if (gameActive) {
+      setTimeout(aiMove, 500);
+    }
+  }
+
+  function makeMove(index, player) {
+    cells[index].textContent = player;
+
+    if (checkWinner(player)) {
+      statusText.textContent = player === "X" ? "Wygrałeś! 🎉" : "AI wygrało 🤖";
+      gameActive = false;
+      return;
+    }
+
+    if (cells.every(cell => cell.textContent !== "")) {
+      statusText.textContent = "Remis!";
+      gameActive = false;
+      return;
+    }
+  }
+
+  function aiMove() {
+    let bestMove = findBestMove("O") || findBestMove("X") || randomMove();
+    makeMove(bestMove, "O");
+  }
+
+  function findBestMove(player) {
+    for (let i = 0; i < 9; i++) {
+      if (cells[i].textContent === "") {
+        cells[i].textContent = player;
+        let win = checkWinner(player);
+        cells[i].textContent = "";
+        if (win) return i;
+      }
+    }
+    return null;
+  }
+
+  function randomMove() {
+    let emptyCells = cells
+      .map((cell, index) => cell.textContent === "" ? index : null)
+      .filter(index => index !== null);
+    return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+  }
+
+  function checkWinner(player) {
+    const winPatterns = [
+      [0,1,2], [3,4,5], [6,7,8],
+      [0,3,6], [1,4,7], [2,5,8],
+      [0,4,8], [2,4,6]
+    ];
+
+    return winPatterns.some(pattern => {
+      const [a, b, c] = pattern;
+      return (
+        cells[a].textContent === player &&
+        cells[b].textContent === player &&
+        cells[c].textContent === player
+      );
+    });
+  }
+
+  function resetGame() {
+    gameActive = true;
+    statusText.textContent = "Twoja tura (X)";
+    createBoard();
+  }
+
+  createBoard();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Mini GTA‑2D z API samochodami</title>
+<style>
+  html,body { margin:0; padding:0; overflow:hidden; width:100%; height:100%; background:#222; font-family:Arial,sans-serif;}
+  canvas { display:block; background:#88aa88; }
+  #hud {
+    position:absolute; top:10px; left:10px; color:white; font-size:22px;
+    background:rgba(0,0,0,0.6); padding:8px 12px; border-radius:6px;
+    pointer-events:none;
+  }
+  #loading { position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:white; font-size:24px; }
+</style>
+</head>
+<body>
+
+<div id="loading">Ładowanie danych pojazdów...</div>
+<div id="hud"></div>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const hud = document.getElementById("hud");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// ------------------ dane API pojazdów ------------------
+
+// API z listą marek (darmowe, ale możliwe ograniczenia CORS)
+// możesz też przygotować własny JSON i podmienić URL
+const VEHICLE_API_URL = "https://the-vehicles-api.herokuapp.com/brands";
+
+// lista marek pobrana z API
+let carBrands = [];
+
+async function loadCarBrands(){
+  try {
+    const res = await fetch(VEHICLE_API_URL);
+    const data = await res.json();
+    // jeśli API zwraca inne pole — dopasuj wg dokumentacji
+    carBrands = data.map(b => b.name).slice(0, 100); // ograniczamy do 100
+  } catch(err) {
+    console.error("Błąd API:", err);
+    // fallback: domyślne marki
+    carBrands = ["Toyota","Ford","Honda","BMW","Audi","Mazda","Chevrolet"];
+  }
+}
+
+function getRandomBrand(){
+  return carBrands[Math.floor(Math.random()*carBrands.length)] || "Car";
+}
+
+// ------------------ klasy gry ------------------
+
+let keys = {};
+
+// postać gracza
+class Player {
+  constructor(x,y){
+    this.x=x; this.y=y;
+    this.w=30; this.h=50;
+    this.color="red";
+    this.inVehicle = null;
+    this.cash = 0;
+    this.name="Walking";
+  }
+  move(){
+    const s = 4;
+    if(this.inVehicle){
+      this.inVehicle.drive(keys);
+      this.x = this.inVehicle.x;
+      this.y = this.inVehicle.y;
+      this.name = this.inVehicle.model;
+      return;
+    }
+    if(keys["a"]||keys["ArrowLeft"]) this.x -= s;
+    if(keys["d"]||keys["ArrowRight"]) this.x += s;
+    if(keys["w"]||keys["ArrowUp"]) this.y -= s;
+    if(keys["s"]||keys["ArrowDown"]) this.y += s;
+    this.name = "Walking";
+  }
+  draw(offsetX){
+    ctx.fillStyle = this.color;
+    ctx.fillRect(this.x-offsetX,this.y,this.w,this.h);
+  }
+}
+
+// pojazd
+class Vehicle {
+  constructor(x,y){
+    this.x=x; this.y=y;
+    this.w=50; this.h=30;
+    this.color="#555";
+    this.model = getRandomBrand();
+    this.hp = 100;
+  }
+  drive(keys){
+    const s=5;
+    if(keys["a"]||keys["ArrowLeft"]) this.x -= s;
+    if(keys["d"]||keys["ArrowRight"]) this.x += s;
+    if(keys["w"]||keys["ArrowUp"]) this.y -= s;
+    if(keys["s"]||keys["ArrowDown"]) this.y += s;
+  }
+  draw(offsetX){
+    ctx.fillStyle=this.color;
+    ctx.fillRect(this.x-offsetX,this.y,this.w,this.h);
+    // wyświetl model
+    ctx.fillStyle="white";
+    ctx.font="12px Arial";
+    ctx.fillText(this.model, this.x-offsetX, this.y-6);
+  }
+}
+
+// NPC pojazdy
+class NPC extends Vehicle {
+  constructor(x,y){
+    super(x,y);
+    this.color="blue";
+    this.speed = 2+Math.random()*2;
+  }
+  update(){
+    this.x -= this.speed;
+    if(this.x + this.w < 0){
+      this.x = map.width + Math.random()*500;
+    }
+  }
+}
+
+// pociski
+class Bullet {
+  constructor(x,y,dx,dy){
+    this.x=x; this.y=y;
+    this.dx=dx; this.dy=dy;
+    this.w=10; this.h=5;
+  }
+  update(){ this.x += this.dx; this.y += this.dy; }
+  draw(offsetX){
+    ctx.fillStyle="orange";
+    ctx.fillRect(this.x-offsetX,this.y,this.w,this.h);
+  }
+}
+
+function shoot(){
+  const speed = 10;
+  bullets.push(new Bullet(player.x+player.w, player.y+player.h/2, speed, 0));
+}
+
+// ------------------ mapa i obiekty ------------------
+
+const map = { width:3000, height:canvas.height };
+
+let player, vehicles, npcs, bullets;
+
+// inicjalizacja świata
+function initGame(){
+  player = new Player(100,canvas.height*0.5);
+  vehicles = [
+    new Vehicle(500,canvas.height*0.5),
+    new Vehicle(900,canvas.height*0.3)
+  ];
+  npcs = [
+    new NPC(1200, canvas.height*0.5),
+    new NPC(1500, canvas.height*0.3),
+    new NPC(2000, canvas.height*0.5),
+  ];
+  bullets = [];
+}
+
+// kolizje
+function checkCollision(a,b){
+  return a.x < b.x+b.w && a.x+a.w > b.x &&
+         a.y < b.y+b.h && a.y+a.h > b.y;
+}
+
+// kamera
+function getOffsetX(){
+  return Math.min(Math.max(player.x - canvas.width/2, 0), map.width-canvas.width);
+}
+
+// rysuj mapę
+function drawMap(offsetX){
+  ctx.fillStyle="#88aa88";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  // drogi
+  ctx.fillStyle="#444";
+  ctx.fillRect(-offsetX, canvas.height*0.5, map.width, 80);
+}
+
+// HUD
+function drawHUD(){
+  hud.innerText = `Mode: ${player.name}   Gotówka: $${player.cash}`;
+}
+
+// --------- pętla gry ---------
+
+function gameLoop(){
+  player.move();
+  npcs.forEach(n=>n.update());
+
+  bullets.forEach((b,i)=>{
+    b.update();
+    // kolizje z NPC
+    npcs.forEach((n,j)=>{
+      if(checkCollision(b,n)){
+        player.cash += 50;
+        n.x = map.width + Math.random()*500; // reset NPC
+        bullets.splice(i,1);
+      }
+    });
+    if(b.x > map.width) bullets.splice(i,1);
+  });
+
+  // wsiadanie do auta
+  if(keys["e"]){
+    vehicles.forEach(v=>{
+      if(checkCollision(player,v) && !player.inVehicle){
+        player.enterVehicle(v);
+      }
+    });
+    // wysiadanie
+    if(player.inVehicle) player.exitVehicle();
+    keys["e"] = false;
+  }
+
+  const offsetX = getOffsetX();
+  drawMap(offsetX);
+
+  vehicles.forEach(v=>v.draw(offsetX));
+  npcs.forEach(n=>n.draw(offsetX));
+  bullets.forEach(b=>b.draw(offsetX));
+  player.draw(offsetX);
+
+  drawHUD();
+  requestAnimationFrame(gameLoop);
+}
+
+// sterowanie
+document.addEventListener("keydown", e=>keys[e.key]=true);
+document.addEventListener("keyup", e=>keys[e.key]=false);
+document.addEventListener("keyup", e=>{
+  if(e.key===" ") shoot();
+});
+
+// start
+loadCarBrands().then(()=>{
+  document.getElementById("loading").remove();
+  initGame();
+  gameLoop();
+});
+
+// dynamiczne dostosowanie
+window.addEventListener("resize", ()=>{
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+</script>
+
+</body>
+</html>

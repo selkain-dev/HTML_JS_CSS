@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Mini GTA2D z grafikami aut</title>
+<style>
+  html,body { margin:0; padding:0; overflow:hidden; width:100%; height:100%; background:#222;}
+  #hud {
+    position:absolute; top:10px; left:10px; color:white; font-size:24px;
+    background:rgba(0,0,0,0.5); padding:8px 12px; border-radius:8px;
+  }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="hud">Gotówka: $0</div>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const hud = document.getElementById("hud");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+// ----------------------------------
+// Wczytywanie grafik aut
+const carSrcList = [
+  "https://www.pikpng.com/pngl/m/358-3580653_appgamekit-showcase-free-2d-car-sprites-car-sprite.png",
+  "https://freeiconspng.com/uploads/red-car-png-clip-art-vector-40.png",
+  "https://freeiconspng.com/uploads/blue-car-png-14.png"
+];
+
+let carImages = [];
+
+function loadImages(srcs, callback){
+  let loaded = 0;
+  srcs.forEach(src => {
+    const img = new Image();
+    img.src = src;
+    img.onload = () => {
+      carImages.push(img);
+      if(++loaded === srcs.length) callback();
+    };
+    img.onerror = () => {
+      console.warn("Nie udało się załadować", src);
+      if(++loaded === srcs.length) callback();
+    };
+  });
+}
+
+// ----------------------------------
+let keys = {};
+let cash = 0;
+
+class Entity {
+  constructor(img,x,y,w,h){
+    this.img = img;
+    this.x = x;
+    this.y = y;
+    this.w = w;
+    this.h = h;
+  }
+  draw(offsetX){
+    if(this.img) ctx.drawImage(this.img, this.x - offsetX, this.y, this.w, this.h);
+    else {
+      ctx.fillStyle="gray";
+      ctx.fillRect(this.x-offsetX, this.y, this.w, this.h);
+    }
+  }
+}
+
+let player, cars, bullets;
+
+function init(){
+  player = new Entity(carImages[0]||null, 100, canvas.height/2, 80, 45);
+  cars = [
+    new Entity(carImages[1]||null, 600, canvas.height/2, 80, 45),
+    new Entity(carImages[2]||null, 900, canvas.height/2 - 50, 80, 45)
+  ];
+  bullets = [];
+}
+
+function shoot(){
+  bullets.push({x: player.x+player.w, y:player.y+player.h/2-5});
+}
+
+function getOffsetX(){
+  return Math.min(Math.max(player.x - canvas.width/2,0), 2000);
+}
+
+function gameLoop(){
+  // ruch gracza
+  if(keys["ArrowLeft"]) player.x -= 5;
+  if(keys["ArrowRight"]) player.x += 5;
+  if(keys["ArrowUp"]) player.y -= 5;
+  if(keys["ArrowDown"]) player.y += 5;
+
+  // strzały
+  bullets.forEach((b,i) => {
+    b.x += 10;
+    cars.forEach((c,j)=>{
+      if(b.x > c.x && b.x < c.x+c.w
+         && b.y > c.y && b.y < c.y+c.h){
+        cash += 50;
+        c.x = Math.random()*2000 + 800;
+        bullets.splice(i,1);
+      }
+    });
+  });
+
+  const offsetX = getOffsetX();
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // rysuj mapę
+  ctx.fillStyle="#555";
+  ctx.fillRect(0, canvas.height*0.5, canvas.width, 100);
+
+  // rysuj auta
+  player.draw(offsetX);
+  cars.forEach(c=>c.draw(offsetX));
+  bullets.forEach(b=>{
+    ctx.fillStyle="orange";
+    ctx.fillRect(b.x-offsetX, b.y, 10,5);
+  });
+
+  hud.textContent = "Gotówka: $" + cash;
+
+  requestAnimationFrame(gameLoop);
+}
+
+document.addEventListener("keydown", e=>keys[e.key]=true);
+document.addEventListener("keyup", e=>{
+  keys[e.key]=false;
+  if(e.key===" ") shoot();
+});
+
+// ładuj obrazy i start
+loadImages(carSrcList, ()=>{
+  init();
+  gameLoop();
+});
+</script>
+
+</body>
+</html>
